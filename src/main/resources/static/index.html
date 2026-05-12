@@ -1,0 +1,1754 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Salón de Fiestas — Admin</title>
+
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet"/>
+  <!-- Leaflet -->
+  <link href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css" rel="stylesheet"/>
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
+
+  <style>
+    :root {
+      --bg-base:       #0c0e14;
+      --bg-surface:    #13151f;
+      --bg-card:       #1a1d2b;
+      --bg-hover:      #20243a;
+      --border:        #2a2e45;
+      --accent:        #e8a045;
+      --accent-dim:    rgba(232,160,69,.15);
+      --accent2:       #5b7fe8;
+      --accent2-dim:   rgba(91,127,232,.15);
+      --success:       #3ecf8e;
+      --danger:        #e85b5b;
+      --warning:       #e8c45b;
+      --text-primary:  #edeef5;
+      --text-secondary:#8b8fa8;
+      --text-muted:    #555970;
+      --sidebar-w:     260px;
+      --topbar-h:      64px;
+      --radius:        12px;
+      --radius-sm:     8px;
+      --font-display:  'Syne', sans-serif;
+      --font-mono:     'DM Mono', monospace;
+      --transition:    .2s cubic-bezier(.4,0,.2,1);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg-base);
+      color: var(--text-primary);
+      font-family: var(--font-display);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── Scrollbar ─────────────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg-base); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+
+    /* ── Sidebar ───────────────────────────────────────────────── */
+    #sidebar {
+      position: fixed; top: 0; left: 0; bottom: 0;
+      width: var(--sidebar-w);
+      background: var(--bg-surface);
+      border-right: 1px solid var(--border);
+      display: flex; flex-direction: column;
+      z-index: 100;
+      transition: transform var(--transition);
+    }
+
+    .sidebar-logo {
+      padding: 24px 20px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .sidebar-logo .logo-icon {
+      width: 38px; height: 38px;
+      background: var(--accent);
+      border-radius: 10px;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 18px; color: #0c0e14; font-weight: 800;
+      margin-right: 10px;
+    }
+    .sidebar-logo .logo-text {
+      font-size: 15px; font-weight: 700; letter-spacing: .02em;
+      line-height: 1.2;
+    }
+    .sidebar-logo .logo-sub {
+      font-size: 11px; color: var(--text-muted); font-family: var(--font-mono);
+      letter-spacing: .08em; text-transform: uppercase;
+    }
+
+    .sidebar-nav { flex: 1; padding: 16px 12px; overflow-y: auto; }
+
+    .nav-section-label {
+      font-size: 10px; letter-spacing: .12em; text-transform: uppercase;
+      color: var(--text-muted); font-family: var(--font-mono);
+      padding: 12px 8px 6px;
+    }
+
+    .nav-item { margin-bottom: 2px; }
+    .nav-link {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px; border-radius: var(--radius-sm);
+      color: var(--text-secondary); font-size: 14px; font-weight: 600;
+      text-decoration: none; cursor: pointer;
+      transition: background var(--transition), color var(--transition);
+      border: none; background: none; width: 100%; text-align: left;
+    }
+    .nav-link i { font-size: 16px; width: 18px; flex-shrink: 0; }
+    .nav-link:hover { background: var(--bg-hover); color: var(--text-primary); }
+    .nav-link.active {
+      background: var(--accent-dim);
+      color: var(--accent);
+    }
+    .nav-link .badge-count {
+      margin-left: auto;
+      background: var(--accent-dim); color: var(--accent);
+      font-size: 10px; font-family: var(--font-mono);
+      padding: 2px 7px; border-radius: 99px;
+    }
+
+    .sidebar-footer {
+      padding: 16px 12px;
+      border-top: 1px solid var(--border);
+    }
+    .sidebar-footer .user-info {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px; border-radius: var(--radius-sm);
+      background: var(--bg-card);
+    }
+    .user-avatar {
+      width: 32px; height: 32px; border-radius: 8px;
+      background: var(--accent2-dim); border: 1px solid var(--accent2);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; color: var(--accent2); font-weight: 700;
+    }
+    .user-name { font-size: 13px; font-weight: 600; line-height: 1.2; }
+    .user-role { font-size: 11px; color: var(--text-muted); font-family: var(--font-mono); }
+
+    /* ── Topbar ────────────────────────────────────────────────── */
+    #topbar {
+      position: fixed; top: 0; left: var(--sidebar-w); right: 0;
+      height: var(--topbar-h);
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; padding: 0 28px;
+      gap: 16px; z-index: 99;
+    }
+    #topbar .page-title {
+      font-size: 18px; font-weight: 700; flex: 1;
+    }
+    #topbar .topbar-actions { display: flex; align-items: center; gap: 8px; }
+    .topbar-btn {
+      width: 36px; height: 36px; border-radius: var(--radius-sm);
+      border: 1px solid var(--border); background: var(--bg-card);
+      color: var(--text-secondary); display: flex; align-items: center;
+      justify-content: center; cursor: pointer; font-size: 16px;
+      transition: all var(--transition);
+    }
+    .topbar-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* API status dot */
+    .api-status {
+      display: flex; align-items: center; gap: 7px;
+      font-size: 12px; color: var(--text-muted); font-family: var(--font-mono);
+    }
+    .api-status .dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--success);
+      box-shadow: 0 0 6px var(--success);
+      animation: pulse 2s infinite;
+    }
+    .api-status .dot.offline { background: var(--danger); box-shadow: 0 0 6px var(--danger); }
+    @keyframes pulse {
+      0%,100% { opacity: 1; } 50% { opacity: .4; }
+    }
+
+    /* ── Main content ──────────────────────────────────────────── */
+    #main {
+      margin-left: var(--sidebar-w);
+      padding-top: var(--topbar-h);
+      min-height: 100vh;
+    }
+    .content-area {
+      padding: 28px;
+      animation: fadeIn .25s ease;
+    }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+
+    /* ── Cards ─────────────────────────────────────────────────── */
+    .card-dark {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+    }
+    .card-dark .card-header-custom {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 18px;
+    }
+    .card-dark .card-title {
+      font-size: 15px; font-weight: 700;
+    }
+
+    /* ── Stat cards ────────────────────────────────────────────── */
+    .stat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 22px;
+      position: relative; overflow: hidden;
+      transition: border-color var(--transition), transform var(--transition);
+    }
+    .stat-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+    .stat-card .stat-icon {
+      width: 42px; height: 42px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; margin-bottom: 12px;
+    }
+    .stat-card .stat-value {
+      font-size: 28px; font-weight: 800; line-height: 1;
+      font-family: var(--font-mono);
+    }
+    .stat-card .stat-label {
+      font-size: 12px; color: var(--text-muted); margin-top: 4px;
+      text-transform: uppercase; letter-spacing: .08em;
+    }
+    .stat-card .stat-delta {
+      font-size: 12px; font-family: var(--font-mono);
+      margin-top: 8px;
+    }
+    .stat-card::after {
+      content: ''; position: absolute; top: 0; right: 0;
+      width: 80px; height: 80px; border-radius: 50%;
+      opacity: .06; transform: translate(20px,-20px);
+    }
+    .stat-accent  .stat-icon { background: var(--accent-dim);  color: var(--accent); }
+    .stat-accent::after  { background: var(--accent); }
+    .stat-blue    .stat-icon { background: var(--accent2-dim); color: var(--accent2); }
+    .stat-blue::after    { background: var(--accent2); }
+    .stat-green   .stat-icon { background: rgba(62,207,142,.12); color: var(--success); }
+    .stat-green::after   { background: var(--success); }
+    .stat-red     .stat-icon { background: rgba(232,91,91,.12);  color: var(--danger); }
+    .stat-red::after     { background: var(--danger); }
+
+    /* ── Table ─────────────────────────────────────────────────── */
+    .table-dark-custom {
+      width: 100%; border-collapse: separate; border-spacing: 0;
+      font-size: 13.5px;
+    }
+    .table-dark-custom thead th {
+      background: var(--bg-surface);
+      color: var(--text-muted); font-size: 11px;
+      text-transform: uppercase; letter-spacing: .1em;
+      font-family: var(--font-mono); font-weight: 500;
+      padding: 10px 14px; border-bottom: 1px solid var(--border);
+    }
+    .table-dark-custom tbody tr {
+      transition: background var(--transition);
+      border-bottom: 1px solid var(--border);
+    }
+    .table-dark-custom tbody tr:last-child td { border-bottom: none; }
+    .table-dark-custom tbody tr:hover { background: var(--bg-hover); }
+    .table-dark-custom tbody td {
+      padding: 12px 14px; color: var(--text-primary); vertical-align: middle;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* ── Badges ────────────────────────────────────────────────── */
+    .badge-custom {
+      padding: 4px 10px; border-radius: 99px;
+      font-size: 11px; font-family: var(--font-mono); font-weight: 500;
+    }
+    .badge-pendiente  { background: rgba(232,196,91,.12); color: var(--warning); }
+    .badge-confirmada { background: rgba(62,207,142,.12);  color: var(--success); }
+    .badge-cancelada  { background: rgba(232,91,91,.12);   color: var(--danger); }
+    .badge-finalizada { background: var(--accent2-dim);    color: var(--accent2); }
+    .badge-activo     { background: rgba(62,207,142,.12);  color: var(--success); }
+    .badge-inactivo   { background: rgba(232,91,91,.12);   color: var(--danger); }
+    .badge-mantenimiento { background: rgba(232,196,91,.12); color: var(--warning); }
+
+    /* ── Buttons ───────────────────────────────────────────────── */
+    .btn-accent {
+      background: var(--accent); color: #0c0e14;
+      border: none; border-radius: var(--radius-sm);
+      padding: 8px 18px; font-size: 13px; font-weight: 700;
+      font-family: var(--font-display); cursor: pointer;
+      transition: opacity var(--transition), transform var(--transition);
+      display: inline-flex; align-items: center; gap: 7px;
+    }
+    .btn-accent:hover { opacity: .88; transform: translateY(-1px); }
+
+    .btn-outline-custom {
+      background: transparent; color: var(--text-secondary);
+      border: 1px solid var(--border); border-radius: var(--radius-sm);
+      padding: 7px 14px; font-size: 13px; font-weight: 600;
+      font-family: var(--font-display); cursor: pointer;
+      transition: all var(--transition);
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    .btn-outline-custom:hover { border-color: var(--text-secondary); color: var(--text-primary); }
+
+    .btn-icon {
+      width: 30px; height: 30px; border-radius: 7px;
+      border: 1px solid var(--border); background: var(--bg-surface);
+      color: var(--text-muted); display: inline-flex;
+      align-items: center; justify-content: center;
+      cursor: pointer; font-size: 13px;
+      transition: all var(--transition);
+    }
+    .btn-icon:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-icon.danger:hover { border-color: var(--danger); color: var(--danger); }
+
+    /* ── Forms ─────────────────────────────────────────────────── */
+    .form-control-dark, .form-select-dark {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      padding: 9px 13px; font-size: 13.5px;
+      font-family: var(--font-display); width: 100%;
+      transition: border-color var(--transition);
+    }
+    .form-control-dark:focus, .form-select-dark:focus {
+      outline: none; border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-dim);
+    }
+    .form-control-dark::placeholder { color: var(--text-muted); }
+    .form-select-dark option { background: var(--bg-card); }
+    .form-label-dark {
+      font-size: 12px; font-weight: 600; color: var(--text-secondary);
+      text-transform: uppercase; letter-spacing: .06em;
+      margin-bottom: 6px; display: block;
+    }
+
+    /* ── Modal ─────────────────────────────────────────────────── */
+    .modal-dark .modal-content {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text-primary);
+    }
+    .modal-dark .modal-header {
+      border-bottom: 1px solid var(--border);
+      padding: 18px 22px;
+    }
+    .modal-dark .modal-title { font-weight: 700; font-size: 16px; }
+    .modal-dark .modal-body { padding: 22px; }
+    .modal-dark .modal-footer {
+      border-top: 1px solid var(--border);
+      padding: 14px 22px;
+    }
+    .btn-close-white { filter: invert(1); opacity: .6; }
+    .btn-close-white:hover { opacity: 1; }
+
+    /* ── Toast ─────────────────────────────────────────────────── */
+    #toast-container {
+      position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .toast-item {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 13px 18px;
+      display: flex; align-items: center; gap: 12px;
+      font-size: 13.5px; min-width: 280px;
+      animation: slideIn .25s ease;
+      box-shadow: 0 8px 32px rgba(0,0,0,.4);
+    }
+    .toast-item.success { border-left: 3px solid var(--success); }
+    .toast-item.error   { border-left: 3px solid var(--danger); }
+    .toast-item.info    { border-left: 3px solid var(--accent2); }
+    @keyframes slideIn { from { transform: translateX(40px); opacity:0; } to { transform:translateX(0); opacity:1; } }
+
+    /* ── Disponibilidad calendar grid ──────────────────────────── */
+    .avail-result {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(220px,1fr)); gap: 14px;
+    }
+    .avail-card {
+      background: var(--bg-surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 16px;
+      transition: border-color var(--transition);
+    }
+    .avail-card.disponible { border-color: var(--success); }
+    .avail-card.bloqueado  { border-color: var(--danger); opacity: .6; }
+
+    /* ── Section header ────────────────────────────────────────── */
+    .section-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 22px;
+    }
+    .section-header h2 {
+      font-size: 22px; font-weight: 800;
+    }
+    .section-header .sub {
+      font-size: 13px; color: var(--text-muted); margin-top: 2px;
+      font-family: var(--font-mono);
+    }
+
+    /* ── Empty state ───────────────────────────────────────────── */
+    .empty-state {
+      text-align: center; padding: 60px 20px;
+      color: var(--text-muted);
+    }
+    .empty-state i { font-size: 42px; margin-bottom: 14px; display: block; }
+    .empty-state p { font-size: 14px; }
+
+    /* ── Loading spinner ───────────────────────────────────────── */
+    .spinner-accent {
+      width: 28px; height: 28px; border-radius: 50%;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      animation: spin .7s linear infinite;
+      margin: 40px auto;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Responsive ────────────────────────────────────────────── */
+    /* ── Mapa ─────────────────────────────────────────────────── */
+    #map-container { height: 480px; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); }
+    .leaflet-popup-content-wrapper { background: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border); border-radius: var(--radius-sm); }
+    .leaflet-popup-tip { background: var(--bg-card); }
+    .leaflet-popup-content { font-family: var(--font-display); font-size: 13px; }
+    .map-salon-badge { display:inline-block; padding:3px 8px; border-radius:99px; font-size:11px; font-family:var(--font-mono); background:rgba(232,160,69,.15); color:#e8a045; margin-bottom:6px; }
+
+    @media (max-width: 768px) {
+      #sidebar { transform: translateX(-100%); }
+      #sidebar.open { transform: translateX(0); }
+      #main { margin-left: 0; }
+      #topbar { left: 0; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════
+     SIDEBAR
+══════════════════════════════════════════════════════════ -->
+<nav id="sidebar">
+  <div class="sidebar-logo d-flex align-items-center">
+    <span class="logo-icon">SF</span>
+    <div>
+      <div class="logo-text">Salón de Fiestas</div>
+      <div class="logo-sub">Panel Admin</div>
+    </div>
+  </div>
+
+  <div class="sidebar-nav">
+    <div class="nav-section-label">Principal</div>
+    <div class="nav-item">
+      <button class="nav-link active" onclick="navigate('dashboard')">
+        <i class="bi bi-grid-1x2-fill"></i> Dashboard
+      </button>
+    </div>
+
+    <div class="nav-section-label">Gestión</div>
+    <div class="nav-item">
+      <button class="nav-link" onclick="navigate('clientes')">
+        <i class="bi bi-people-fill"></i> Clientes
+      </button>
+    </div>
+    <div class="nav-item">
+      <button class="nav-link" onclick="navigate('salones')">
+        <i class="bi bi-building"></i> Salones
+      </button>
+    </div>
+    <div class="nav-item">
+      <button class="nav-link" onclick="navigate('reservas')">
+        <i class="bi bi-calendar-check-fill"></i> Reservas
+        <span class="badge-count" id="badge-reservas">—</span>
+      </button>
+    </div>
+    <div class="nav-item">
+      <button class="nav-link" onclick="navigate('disponibilidad')">
+        <i class="bi bi-calendar-range"></i> Disponibilidad
+      </button>
+    </div>
+
+    <div class="nav-item">
+      <button class="nav-link" onclick="navigate('mapa')">
+        <i class="bi bi-geo-alt-fill"></i> Mapa de salones
+      </button>
+    </div>
+
+    <div class="nav-section-label">Finanzas</div>
+    <div class="nav-item">
+      <button class="nav-link" onclick="navigate('pagos')">
+        <i class="bi bi-credit-card-fill"></i> Pagos
+      </button>
+    </div>
+    <div class="nav-item">
+      <button class="nav-link" onclick="navigate('servicios')">
+        <i class="bi bi-stars"></i> Servicios
+      </button>
+    </div>
+  </div>
+
+  <div class="sidebar-footer">
+    <div class="user-info">
+      <div class="user-avatar">A</div>
+      <div>
+        <div class="user-name">Administrador</div>
+        <div class="user-role">admin</div>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- ══════════════════════════════════════════════════════════
+     TOPBAR
+══════════════════════════════════════════════════════════ -->
+<header id="topbar">
+  <button class="topbar-btn d-md-none" onclick="toggleSidebar()">
+    <i class="bi bi-list"></i>
+  </button>
+  <div class="page-title" id="page-title">Dashboard</div>
+  <div class="topbar-actions">
+    <div class="api-status">
+      <span class="dot" id="api-dot"></span>
+      <span id="api-label" style="font-size:11px">API</span>
+    </div>
+    <button class="topbar-btn" onclick="refreshCurrentPage()" title="Actualizar">
+      <i class="bi bi-arrow-clockwise"></i>
+    </button>
+    <button class="topbar-btn" title="Configuración">
+      <i class="bi bi-gear"></i>
+    </button>
+  </div>
+</header>
+
+<!-- ══════════════════════════════════════════════════════════
+     MAIN
+══════════════════════════════════════════════════════════ -->
+<main id="main">
+  <div class="content-area" id="content-area">
+    <!-- content injected by JS -->
+  </div>
+</main>
+
+<!-- ══════════════════════════════════════════════════════════
+     MODAL GENÉRICO
+══════════════════════════════════════════════════════════ -->
+<div class="modal fade modal-dark" id="genericModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalTitle">—</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="modalBody"></div>
+      <div class="modal-footer">
+        <button class="btn-outline-custom" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn-accent" id="modalConfirm">Guardar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast container -->
+<div id="toast-container"></div>
+
+<!-- Leaflet JS -->
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js"></script>
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+// CONFIG
+// ══════════════════════════════════════════════════════════════
+const API = 'http://localhost:8080/api/v1';
+let currentPage = 'dashboard';
+let bsModal = null;
+
+// ══════════════════════════════════════════════════════════════
+// API HELPERS
+// ══════════════════════════════════════════════════════════════
+async function apiFetch(path, opts = {}) {
+  try {
+    const res = await fetch(API + path, {
+      headers: { 'Content-Type': 'application/json', ...opts.headers },
+      ...opts
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || `Error ${res.status}`);
+    }
+    if (res.status === 204) return null;
+    return res.json();
+  } catch (e) {
+    throw e;
+  }
+}
+
+async function checkApiStatus() {
+  try {
+    await fetch(API.replace('/v1','') + '/actuator/health', { signal: AbortSignal.timeout(2000) });
+    document.getElementById('api-dot').classList.remove('offline');
+    document.getElementById('api-label').textContent = 'API online';
+  } catch {
+    document.getElementById('api-dot').classList.add('offline');
+    document.getElementById('api-label').textContent = 'API offline';
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// TOAST
+// ══════════════════════════════════════════════════════════════
+function toast(msg, type = 'info') {
+  const icons = { success: 'bi-check-circle-fill', error: 'bi-x-circle-fill', info: 'bi-info-circle-fill' };
+  const colors = { success: 'var(--success)', error: 'var(--danger)', info: 'var(--accent2)' };
+  const el = document.createElement('div');
+  el.className = `toast-item ${type}`;
+  el.innerHTML = `<i class="bi ${icons[type]}" style="color:${colors[type]};font-size:16px"></i><span>${msg}</span>`;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+
+// ══════════════════════════════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════════════════════════════
+function navigate(page) {
+  currentPage = page;
+  document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+  document.querySelectorAll('.nav-link').forEach(l => {
+    if (l.getAttribute('onclick')?.includes(`'${page}'`)) l.classList.add('active');
+  });
+  const titles = {
+    dashboard: 'Dashboard', clientes: 'Clientes', salones: 'Salones',
+    reservas: 'Reservas', disponibilidad: 'Disponibilidad',
+    pagos: 'Pagos', servicios: 'Servicios'
+  };
+  document.getElementById('page-title').textContent = titles[page] || page;
+  pages[page]();
+}
+
+function refreshCurrentPage() { navigate(currentPage); }
+function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); }
+
+// ══════════════════════════════════════════════════════════════
+// RENDER HELPERS
+// ══════════════════════════════════════════════════════════════
+function setContent(html) {
+  const el = document.getElementById('content-area');
+  el.style.opacity = 0;
+  el.innerHTML = html;
+  requestAnimationFrame(() => { el.style.transition = 'opacity .2s'; el.style.opacity = 1; });
+}
+
+function loading() {
+  setContent('<div class="spinner-accent"></div>');
+}
+
+function estadoBadge(e) {
+  const map = {
+    PENDIENTE: 'badge-pendiente', CONFIRMADA: 'badge-confirmada',
+    CANCELADA: 'badge-cancelada', FINALIZADA: 'badge-finalizada',
+    ACTIVO: 'badge-activo', INACTIVO: 'badge-inactivo',
+    MANTENIMIENTO: 'badge-mantenimiento'
+  };
+  return `<span class="badge-custom ${map[e]||''}">${e}</span>`;
+}
+
+function fmtDate(d) { return d ? new Date(d).toLocaleDateString('es-AR') : '—'; }
+function fmtMoney(n) { return n != null ? '$' + Number(n).toLocaleString('es-AR') : '—'; }
+
+function openModal(title, bodyHtml, onConfirm) {
+  document.getElementById('modalTitle').textContent = title;
+  document.getElementById('modalBody').innerHTML = bodyHtml;
+  const btn = document.getElementById('modalConfirm');
+  btn.onclick = onConfirm;
+  if (!bsModal) bsModal = new bootstrap.Modal(document.getElementById('genericModal'));
+  bsModal.show();
+}
+function closeModal() { bsModal?.hide(); }
+
+// ══════════════════════════════════════════════════════════════
+// PAGES
+// ══════════════════════════════════════════════════════════════
+const pages = {};
+
+// ── DASHBOARD ────────────────────────────────────────────────
+pages.dashboard = async function() {
+  loading();
+  try {
+    const [clientes, salones, reservas, servicios] = await Promise.all([
+      apiFetch('/clientes').catch(() => []),
+      apiFetch('/salones').catch(() => []),
+      apiFetch('/reservas/cliente/0').catch(() => []),  // placeholder
+      apiFetch('/servicios').catch(() => []),
+    ]);
+
+    const reservasMock = reservas.length ? reservas : [];
+    const pendientes = reservasMock.filter(r => r.estado === 'PENDIENTE').length;
+    const confirmadas = reservasMock.filter(r => r.estado === 'CONFIRMADA').length;
+
+    // update badge
+    document.getElementById('badge-reservas').textContent = pendientes || '—';
+
+    setContent(`
+      <div class="section-header">
+        <div>
+          <h2>Dashboard</h2>
+          <div class="sub">Resumen general del sistema</div>
+        </div>
+        <button class="btn-accent" onclick="navigate('reservas')">
+          <i class="bi bi-plus-lg"></i> Nueva reserva
+        </button>
+      </div>
+
+      <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-xl-3">
+          <div class="stat-card stat-accent">
+            <div class="stat-icon"><i class="bi bi-people-fill"></i></div>
+            <div class="stat-value">${clientes.length}</div>
+            <div class="stat-label">Clientes registrados</div>
+          </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+          <div class="stat-card stat-blue">
+            <div class="stat-icon"><i class="bi bi-building"></i></div>
+            <div class="stat-value">${salones.length}</div>
+            <div class="stat-label">Salones activos</div>
+          </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+          <div class="stat-card stat-green">
+            <div class="stat-icon"><i class="bi bi-calendar-check-fill"></i></div>
+            <div class="stat-value">${confirmadas}</div>
+            <div class="stat-label">Reservas confirmadas</div>
+          </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+          <div class="stat-card stat-red">
+            <div class="stat-icon"><i class="bi bi-clock-history"></i></div>
+            <div class="stat-value">${pendientes}</div>
+            <div class="stat-label">Reservas pendientes</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row g-3">
+        <div class="col-lg-7">
+          <div class="card-dark">
+            <div class="card-header-custom">
+              <span class="card-title">Salones registrados</span>
+              <button class="btn-outline-custom" onclick="navigate('salones')">Ver todos</button>
+            </div>
+            ${salones.length === 0 ? `<div class="empty-state"><i class="bi bi-building"></i><p>No hay salones registrados.</p></div>` : `
+            <div class="table-responsive">
+              <table class="table-dark-custom">
+                <thead><tr>
+                  <th>Nombre</th><th>Capacidad</th><th>Precio/h</th><th>Estado</th>
+                </tr></thead>
+                <tbody>
+                  ${salones.slice(0,5).map(s => `<tr>
+                    <td><strong>${s.nombre}</strong></td>
+                    <td><span style="font-family:var(--font-mono)">${s.capacidadMax} pax</span></td>
+                    <td style="font-family:var(--font-mono);color:var(--accent)">${fmtMoney(s.precioHora)}</td>
+                    <td>${estadoBadge(s.estado)}</td>
+                  </tr>`).join('')}
+                </tbody>
+              </table>
+            </div>`}
+          </div>
+        </div>
+        <div class="col-lg-5">
+          <div class="card-dark h-100">
+            <div class="card-header-custom">
+              <span class="card-title">Accesos rápidos</span>
+            </div>
+            <div class="d-flex flex-column gap-2">
+              ${[
+                ['bi-search','Consultar disponibilidad','disponibilidad','var(--accent)'],
+                ['bi-person-plus-fill','Registrar cliente','clientes','var(--accent2)'],
+                ['bi-calendar-plus','Nueva reserva','reservas','var(--success)'],
+                ['bi-stars','Gestionar servicios','servicios','var(--warning)'],
+              ].map(([icon, label, page, color]) => `
+                <button onclick="navigate('${page}')" style="
+                  background:var(--bg-surface);border:1px solid var(--border);
+                  border-radius:var(--radius-sm);padding:13px 16px;
+                  display:flex;align-items:center;gap:12px;color:var(--text-primary);
+                  font-family:var(--font-display);font-size:13.5px;font-weight:600;
+                  cursor:pointer;transition:border-color .2s;text-align:left;
+                " onmouseover="this.style.borderColor='${color}'" onmouseout="this.style.borderColor='var(--border)'">
+                  <span style="color:${color};font-size:18px"><i class="bi ${icon}"></i></span>
+                  ${label}
+                  <i class="bi bi-arrow-right ms-auto" style="color:var(--text-muted)"></i>
+                </button>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+      </div>
+    `);
+  } catch(e) {
+    setContent(`<div class="empty-state"><i class="bi bi-exclamation-triangle" style="color:var(--danger)"></i><p>${e.message}</p></div>`);
+  }
+};
+
+// ── CLIENTES ─────────────────────────────────────────────────
+pages.clientes = async function() {
+  loading();
+  try {
+    const data = await apiFetch('/clientes');
+    setContent(`
+      <div class="section-header">
+        <div><h2>Clientes</h2><div class="sub">${data.length} registrados</div></div>
+        <button class="btn-accent" onclick="formCliente()">
+          <i class="bi bi-plus-lg"></i> Nuevo cliente
+        </button>
+      </div>
+      <div class="card-dark">
+        ${data.length === 0 ? `<div class="empty-state"><i class="bi bi-people"></i><p>No hay clientes registrados.</p></div>` : `
+        <div class="table-responsive">
+          <table class="table-dark-custom">
+            <thead><tr><th>Nombre</th><th>Email</th><th>Teléfono</th><th>DNI</th><th>Estado</th><th>Acciones</th></tr></thead>
+            <tbody>
+              ${data.map(c => `<tr>
+                <td><strong>${c.nombre} ${c.apellido}</strong></td>
+                <td style="color:var(--text-secondary)">${c.email}</td>
+                <td style="font-family:var(--font-mono)">${c.telefono}</td>
+                <td style="font-family:var(--font-mono)">${c.dni}</td>
+                <td>${estadoBadge(c.activo ? 'ACTIVO' : 'INACTIVO')}</td>
+                <td>
+                  <div class="d-flex gap-1">
+                    <button class="btn-icon" onclick="formCliente(${JSON.stringify(c).replace(/"/g,'&quot;')})" title="Editar"><i class="bi bi-pencil"></i></button>
+                    <button class="btn-icon danger" onclick="eliminarCliente(${c.id})" title="Desactivar"><i class="bi bi-trash"></i></button>
+                  </div>
+                </td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>`}
+      </div>
+    `);
+  } catch(e) { toast(e.message, 'error'); }
+};
+
+function formCliente(c = null) {
+  const titulo = c ? 'Editar cliente' : 'Nuevo cliente';
+  const body = `
+    <div class="row g-3">
+      <div class="col-md-6">
+        <label class="form-label-dark">Nombre</label>
+        <input id="f-nombre" class="form-control-dark" value="${c?.nombre||''}" placeholder="Juan">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label-dark">Apellido</label>
+        <input id="f-apellido" class="form-control-dark" value="${c?.apellido||''}" placeholder="Pérez">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label-dark">Email</label>
+        <input id="f-email" type="email" class="form-control-dark" value="${c?.email||''}" placeholder="juan@ejemplo.com">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label-dark">Teléfono</label>
+        <input id="f-telefono" class="form-control-dark" value="${c?.telefono||''}" placeholder="2264000000">
+      </div>
+      <div class="col-12">
+        <label class="form-label-dark">DNI</label>
+        <input id="f-dni" class="form-control-dark" value="${c?.dni||''}" placeholder="30000000" ${c ? 'disabled' : ''}>
+      </div>
+    </div>
+  `;
+  openModal(titulo, body, async () => {
+    const payload = {
+      nombre: document.getElementById('f-nombre').value,
+      apellido: document.getElementById('f-apellido').value,
+      email: document.getElementById('f-email').value,
+      telefono: document.getElementById('f-telefono').value,
+      dni: document.getElementById('f-dni').value,
+    };
+    try {
+      if (c) {
+        await apiFetch(`/clientes/${c.id}`, { method: 'PUT', body: JSON.stringify(payload) });
+        toast('Cliente actualizado', 'success');
+      } else {
+        await apiFetch('/clientes', { method: 'POST', body: JSON.stringify(payload) });
+        toast('Cliente creado', 'success');
+      }
+      closeModal();
+      pages.clientes();
+    } catch(e) { toast(e.message, 'error'); }
+  });
+}
+
+async function eliminarCliente(id) {
+  if (!confirm('¿Desactivar este cliente?')) return;
+  try {
+    await apiFetch(`/clientes/${id}`, { method: 'DELETE' });
+    toast('Cliente desactivado', 'success');
+    pages.clientes();
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+// ── SALONES ──────────────────────────────────────────────────
+pages.salones = async function() {
+  loading();
+  try {
+    const data = await apiFetch('/salones');
+    setContent(`
+      <div class="section-header">
+        <div><h2>Salones</h2><div class="sub">${data.length} en sistema</div></div>
+        <button class="btn-accent" onclick="formSalon()">
+          <i class="bi bi-plus-lg"></i> Nuevo salón
+        </button>
+      </div>
+      <div class="row g-3">
+        ${data.length === 0 ? `<div class="empty-state"><i class="bi bi-building"></i><p>No hay salones registrados.</p></div>` :
+        data.map(s => `
+          <div class="col-md-6 col-xl-4">
+            <div class="card-dark h-100" style="border-color:${s.estado==='ACTIVO'?'var(--border)':s.estado==='MANTENIMIENTO'?'rgba(232,196,91,.3)':'rgba(232,91,91,.3)'}">
+              <div class="d-flex align-items-start justify-content-between mb-3">
+                <div>
+                  <div style="font-size:16px;font-weight:700">${s.nombre}</div>
+                  <div style="font-size:12px;color:var(--text-muted);margin-top:2px">${s.descripcion||'Sin descripción'}</div>
+                </div>
+                ${estadoBadge(s.estado)}
+              </div>
+              <div class="d-flex gap-3 mb-3">
+                <div style="text-align:center">
+                  <div style="font-size:20px;font-weight:800;font-family:var(--font-mono);color:var(--accent)">${s.capacidadMax}</div>
+                  <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em">Capacidad</div>
+                </div>
+                <div style="text-align:center">
+                  <div style="font-size:20px;font-weight:800;font-family:var(--font-mono);color:var(--accent2)">${fmtMoney(s.precioHora)}</div>
+                  <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em">Por hora</div>
+                </div>
+              </div>
+              ${s.direccion ? `<div style="font-size:12px;color:var(--text-muted);margin-bottom:10px"><i class="bi bi-geo-alt"></i> ${s.direccion}</div>` : ''}
+              <div class="d-flex gap-2 mt-auto">
+                <button class="btn-outline-custom" style="flex:1;justify-content:center"
+                  onclick="formSalon(${JSON.stringify(s).replace(/"/g,'&quot;')})">
+                  <i class="bi bi-pencil"></i> Editar
+                </button>
+                <button class="btn-icon" onclick="verHorarios(${s.id}, '${s.nombre}')" title="Horarios">
+                  <i class="bi bi-clock"></i>
+                </button>
+                <button class="btn-icon" onclick="cambiarEstadoSalon(${s.id}, '${s.estado}')" title="Cambiar estado">
+                  <i class="bi bi-arrow-repeat"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    `);
+  } catch(e) { toast(e.message, 'error'); }
+};
+
+function formSalon(s = null) {
+  const body = `
+    <div class="row g-3">
+      <div class="col-12">
+        <label class="form-label-dark">Nombre del salón</label>
+        <input id="s-nombre" class="form-control-dark" value="${s?.nombre||''}" placeholder="Salón Principal">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label-dark">Capacidad máxima</label>
+        <input id="s-cap" type="number" class="form-control-dark" value="${s?.capacidadMax||''}" placeholder="200">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label-dark">Precio por hora ($)</label>
+        <input id="s-precio" type="number" class="form-control-dark" value="${s?.precioHora||''}" placeholder="5000">
+      </div>
+      <div class="col-12">
+        <label class="form-label-dark">Descripción</label>
+        <textarea id="s-desc" class="form-control-dark" rows="2" placeholder="Descripción del salón...">${s?.descripcion||''}</textarea>
+      </div>
+      <div class="col-12">
+        <label class="form-label-dark">Dirección</label>
+        <input id="s-dir" class="form-control-dark" value="${s?.direccion||''}" placeholder="Av. San Martín 1234, Buenos Aires">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label-dark">Latitud</label>
+        <input id="s-lat" type="number" step="any" class="form-control-dark" value="${s?.latitud||''}" placeholder="-34.6037">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label-dark">Longitud</label>
+        <input id="s-lng" type="number" step="any" class="form-control-dark" value="${s?.longitud||''}" placeholder="-58.3816">
+      </div>
+      <div class="col-12">
+        <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;font-size:12px;color:var(--text-muted)">
+          <i class="bi bi-info-circle"></i> Podés obtener las coordenadas haciendo clic derecho en
+          <a href="https://maps.google.com" target="_blank" style="color:var(--accent2)">Google Maps</a> → "¿Qué hay aquí?"
+        </div>
+      </div>
+    </div>
+  `;
+  openModal(s ? 'Editar salón' : 'Nuevo salón', body, async () => {
+    const payload = {
+      nombre: document.getElementById('s-nombre').value,
+      capacidadMax: +document.getElementById('s-cap').value,
+      precioHora: +document.getElementById('s-precio').value,
+      descripcion: document.getElementById('s-desc').value,
+      direccion: document.getElementById('s-dir').value || null,
+      latitud: document.getElementById('s-lat').value ? +document.getElementById('s-lat').value : null,
+      longitud: document.getElementById('s-lng').value ? +document.getElementById('s-lng').value : null,
+    };
+    try {
+      if (s) {
+        await apiFetch(`/salones/${s.id}`, { method: 'PUT', body: JSON.stringify(payload) });
+        toast('Salón actualizado', 'success');
+      } else {
+        await apiFetch('/salones', { method: 'POST', body: JSON.stringify(payload) });
+        toast('Salón creado', 'success');
+      }
+      closeModal();
+      pages.salones();
+    } catch(e) { toast(e.message, 'error'); }
+  });
+}
+
+async function cambiarEstadoSalon(id, estadoActual) {
+  const estados = ['ACTIVO', 'INACTIVO', 'MANTENIMIENTO'].filter(e => e !== estadoActual);
+  const body = `
+    <label class="form-label-dark">Nuevo estado</label>
+    <select id="nuevo-estado" class="form-select-dark">
+      ${estados.map(e => `<option value="${e}">${e}</option>`).join('')}
+    </select>
+  `;
+  openModal('Cambiar estado del salón', body, async () => {
+    const estado = document.getElementById('nuevo-estado').value;
+    try {
+      await apiFetch(`/salones/${id}/estado?estado=${estado}`, { method: 'PATCH' });
+      toast('Estado actualizado', 'success');
+      closeModal();
+      pages.salones();
+    } catch(e) { toast(e.message, 'error'); }
+  });
+}
+
+// ── RESERVAS ─────────────────────────────────────────────────
+pages.reservas = async function() {
+  loading();
+  try {
+    // Necesitamos un clienteId para listar; mostramos buscador
+    setContent(`
+      <div class="section-header">
+        <div><h2>Reservas</h2><div class="sub">Buscar por cliente</div></div>
+        <button class="btn-accent" onclick="formReserva()">
+          <i class="bi bi-plus-lg"></i> Nueva reserva
+        </button>
+      </div>
+      <div class="card-dark mb-3">
+        <div class="row g-3 align-items-end">
+          <div class="col-md-5">
+            <label class="form-label-dark">ID de cliente</label>
+            <input id="search-cliente-id" type="number" class="form-control-dark" placeholder="Ej: 1">
+          </div>
+          <div class="col-md-3">
+            <button class="btn-accent w-100" onclick="buscarReservasPorCliente()">
+              <i class="bi bi-search"></i> Buscar
+            </button>
+          </div>
+        </div>
+      </div>
+      <div id="reservas-result">
+        <div class="empty-state">
+          <i class="bi bi-calendar2-week" style="color:var(--text-muted)"></i>
+          <p>Ingresá un ID de cliente para ver sus reservas.</p>
+        </div>
+      </div>
+    `);
+  } catch(e) { toast(e.message, 'error'); }
+};
+
+async function buscarReservasPorCliente() {
+  const id = document.getElementById('search-cliente-id').value;
+  if (!id) return toast('Ingresá un ID de cliente', 'info');
+  const container = document.getElementById('reservas-result');
+  container.innerHTML = '<div class="spinner-accent"></div>';
+  try {
+    const data = await apiFetch(`/reservas/cliente/${id}`);
+    if (data.length === 0) {
+      container.innerHTML = `<div class="empty-state"><i class="bi bi-calendar-x"></i><p>Sin reservas para este cliente.</p></div>`;
+      return;
+    }
+    container.innerHTML = `
+      <div class="card-dark">
+        <div class="table-responsive">
+          <table class="table-dark-custom">
+            <thead><tr><th>ID</th><th>Salón</th><th>Fecha</th><th>Horario</th><th>Total</th><th>Estado</th><th>Acciones</th></tr></thead>
+            <tbody>
+              ${data.map(r => `<tr>
+                <td style="font-family:var(--font-mono);color:var(--text-muted)">#${r.id}</td>
+                <td><strong>${r.nombreSalon}</strong></td>
+                <td>${fmtDate(r.fechaEvento)}</td>
+                <td style="font-family:var(--font-mono)">${r.horaInicio} – ${r.horaFin}</td>
+                <td style="font-family:var(--font-mono);color:var(--accent)">${fmtMoney(r.precioTotal)}</td>
+                <td>${estadoBadge(r.estado)}</td>
+                <td>
+                  <div class="d-flex gap-1">
+                    ${r.estado==='PENDIENTE' ? `<button class="btn-icon" onclick="accionReserva(${r.id},'confirmar')" title="Confirmar"><i class="bi bi-check-lg" style="color:var(--success)"></i></button>` : ''}
+                    ${r.estado!=='CANCELADA'&&r.estado!=='FINALIZADA' ? `<button class="btn-icon danger" onclick="accionReserva(${r.id},'cancelar')" title="Cancelar"><i class="bi bi-x-lg"></i></button>` : ''}
+                  </div>
+                </td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  } catch(e) { container.innerHTML = `<div class="empty-state"><i class="bi bi-exclamation-triangle" style="color:var(--danger)"></i><p>${e.message}</p></div>`; }
+}
+
+async function accionReserva(id, accion) {
+  const labels = { confirmar: 'confirmar', cancelar: 'cancelar' };
+  if (!confirm(`¿Querés ${labels[accion]} la reserva #${id}?`)) return;
+  try {
+    await apiFetch(`/reservas/${id}/${accion}`, { method: 'POST' });
+    toast(`Reserva ${accion === 'confirmar' ? 'confirmada' : 'cancelada'}`, 'success');
+    buscarReservasPorCliente();
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+async function formReserva() {
+  let clientes = [], salones = [];
+  try {
+    [clientes, salones] = await Promise.all([apiFetch('/clientes'), apiFetch('/salones')]);
+  } catch(e) {}
+  const body = `
+    <div class="row g-3">
+      <div class="col-md-6">
+        <label class="form-label-dark">Cliente</label>
+        <select id="r-cliente" class="form-select-dark">
+          <option value="">— Seleccioná —</option>
+          ${clientes.map(c => `<option value="${c.id}">${c.nombre} ${c.apellido}</option>`).join('')}
+        </select>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label-dark">Salón</label>
+        <select id="r-salon" class="form-select-dark">
+          <option value="">— Seleccioná —</option>
+          ${salones.filter(s=>s.estado==='ACTIVO').map(s => `<option value="${s.id}">${s.nombre}</option>`).join('')}
+        </select>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label-dark">Fecha del evento</label>
+        <input id="r-fecha" type="date" class="form-control-dark">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label-dark">Hora inicio</label>
+        <input id="r-inicio" type="time" class="form-control-dark">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label-dark">Hora fin</label>
+        <input id="r-fin" type="time" class="form-control-dark">
+      </div>
+      <div class="col-12">
+        <label class="form-label-dark">Observaciones</label>
+        <textarea id="r-obs" class="form-control-dark" rows="2" placeholder="Notas adicionales..."></textarea>
+      </div>
+    </div>
+  `;
+  openModal('Nueva reserva', body, async () => {
+    const payload = {
+      clienteId: +document.getElementById('r-cliente').value,
+      salonId: +document.getElementById('r-salon').value,
+      fechaEvento: document.getElementById('r-fecha').value,
+      horaInicio: document.getElementById('r-inicio').value,
+      horaFin: document.getElementById('r-fin').value,
+      observaciones: document.getElementById('r-obs').value,
+      servicios: []
+    };
+    try {
+      await apiFetch('/reservas', { method: 'POST', body: JSON.stringify(payload) });
+      toast('Reserva creada exitosamente', 'success');
+      closeModal();
+    } catch(e) { toast(e.message, 'error'); }
+  });
+}
+
+// ── DISPONIBILIDAD ───────────────────────────────────────────
+pages.disponibilidad = async function() {
+  setContent(`
+    <div class="section-header">
+      <div><h2>Disponibilidad</h2><div class="sub">Consultá salones libres por fecha y horario</div></div>
+    </div>
+    <div class="card-dark mb-4">
+      <div class="row g-3 align-items-end">
+        <div class="col-md-3">
+          <label class="form-label-dark">Fecha</label>
+          <input id="d-fecha" type="date" class="form-control-dark" value="${new Date().toISOString().slice(0,10)}">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label-dark">Hora inicio</label>
+          <input id="d-inicio" type="time" class="form-control-dark" value="18:00">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label-dark">Hora fin</label>
+          <input id="d-fin" type="time" class="form-control-dark" value="23:00">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label-dark">Capacidad mín.</label>
+          <input id="d-cap" type="number" class="form-control-dark" value="1" min="1">
+        </div>
+        <div class="col-md-3">
+          <button class="btn-accent w-100" onclick="consultarDisponibilidad()">
+            <i class="bi bi-search"></i> Consultar
+          </button>
+        </div>
+      </div>
+    </div>
+    <div id="disp-result"></div>
+  `);
+};
+
+async function consultarDisponibilidad() {
+  const payload = {
+    fecha: document.getElementById('d-fecha').value,
+    horaInicio: document.getElementById('d-inicio').value,
+    horaFin: document.getElementById('d-fin').value,
+    capacidadMinima: +document.getElementById('d-cap').value,
+  };
+  const container = document.getElementById('disp-result');
+  container.innerHTML = '<div class="spinner-accent"></div>';
+  try {
+    const data = await apiFetch('/salones/disponibilidad', {
+      method: 'POST', body: JSON.stringify(payload)
+    });
+    if (data.length === 0) {
+      container.innerHTML = `<div class="empty-state"><i class="bi bi-calendar-x"></i><p>No hay salones disponibles para ese rango.</p></div>`;
+      return;
+    }
+    container.innerHTML = `
+      <div class="avail-result">
+        ${data.map(s => `
+          <div class="avail-card ${s.disponible ? 'disponible' : 'bloqueado'}">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+              <strong style="font-size:15px">${s.nombreSalon}</strong>
+              <span class="badge-custom ${s.disponible ? 'badge-confirmada' : 'badge-cancelada'}">
+                ${s.disponible ? 'Disponible' : 'Bloqueado'}
+              </span>
+            </div>
+            <div style="font-family:var(--font-mono);font-size:13px;color:var(--text-secondary);margin-bottom:6px">
+              <i class="bi bi-people"></i> ${s.capacidadMax} pax
+            </div>
+            <div style="font-family:var(--font-mono);font-size:16px;font-weight:700;color:var(--accent)">
+              ${fmtMoney(s.precioHora)}<span style="font-size:11px;color:var(--text-muted)">/hora</span>
+            </div>
+            ${!s.disponible && s.razonesBloqueado?.length ? `
+              <div style="margin-top:10px;font-size:12px;color:var(--danger)">
+                ${s.razonesBloqueado.map(r => `<div>• ${r}</div>`).join('')}
+              </div>
+            ` : ''}
+          </div>
+        `).join('')}
+      </div>
+    `;
+  } catch(e) {
+    container.innerHTML = `<div class="empty-state"><i class="bi bi-exclamation-triangle" style="color:var(--danger)"></i><p>${e.message}</p></div>`;
+  }
+}
+
+// ── PAGOS ────────────────────────────────────────────────────
+pages.pagos = async function() {
+  setContent(`
+    <div class="section-header">
+      <div><h2>Pagos</h2><div class="sub">Registrar y consultar pagos por reserva</div></div>
+      <button class="btn-accent" onclick="formPago()"><i class="bi bi-plus-lg"></i> Registrar pago</button>
+    </div>
+    <div class="card-dark mb-3">
+      <div class="row g-3 align-items-end">
+        <div class="col-md-4">
+          <label class="form-label-dark">ID de reserva</label>
+          <input id="search-reserva-id" type="number" class="form-control-dark" placeholder="Ej: 1">
+        </div>
+        <div class="col-md-3">
+          <button class="btn-accent w-100" onclick="buscarPagosPorReserva()">
+            <i class="bi bi-search"></i> Buscar
+          </button>
+        </div>
+      </div>
+    </div>
+    <div id="pagos-result">
+      <div class="empty-state">
+        <i class="bi bi-credit-card" style="color:var(--text-muted)"></i>
+        <p>Ingresá un ID de reserva para ver sus pagos.</p>
+      </div>
+    </div>
+  `);
+};
+
+async function buscarPagosPorReserva() {
+  const id = document.getElementById('search-reserva-id').value;
+  if (!id) return toast('Ingresá un ID de reserva', 'info');
+  const container = document.getElementById('pagos-result');
+  container.innerHTML = '<div class="spinner-accent"></div>';
+  try {
+    const data = await apiFetch(`/pagos/reserva/${id}`);
+    if (data.length === 0) {
+      container.innerHTML = `<div class="empty-state"><i class="bi bi-receipt"></i><p>Sin pagos para esta reserva.</p></div>`;
+      return;
+    }
+    const total = data.filter(p=>p.tipo!=='REEMBOLSO').reduce((a,p)=>a+Number(p.monto),0);
+    container.innerHTML = `
+      <div class="card-dark">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <span style="font-size:13px;color:var(--text-muted)">Total cobrado</span>
+          <span style="font-size:22px;font-weight:800;font-family:var(--font-mono);color:var(--success)">${fmtMoney(total)}</span>
+        </div>
+        <div class="table-responsive">
+          <table class="table-dark-custom">
+            <thead><tr><th>ID</th><th>Fecha</th><th>Monto</th><th>Método</th><th>Tipo</th><th>Comprobante</th></tr></thead>
+            <tbody>
+              ${data.map(p => `<tr>
+                <td style="font-family:var(--font-mono);color:var(--text-muted)">#${p.id}</td>
+                <td>${fmtDate(p.fechaPago)}</td>
+                <td style="font-family:var(--font-mono);color:var(--accent)">${fmtMoney(p.monto)}</td>
+                <td>${p.metodo}</td>
+                <td>${p.tipo}</td>
+                <td style="color:var(--text-secondary)">${p.comprobante||'—'}</td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  } catch(e) { container.innerHTML = `<div class="empty-state"><i class="bi bi-exclamation-triangle" style="color:var(--danger)"></i><p>${e.message}</p></div>`; }
+}
+
+function formPago() {
+  const body = `
+    <div class="row g-3">
+      <div class="col-md-6">
+        <label class="form-label-dark">ID de reserva</label>
+        <input id="p-reserva" type="number" class="form-control-dark" placeholder="1">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label-dark">Fecha de pago</label>
+        <input id="p-fecha" type="date" class="form-control-dark" value="${new Date().toISOString().slice(0,10)}">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label-dark">Monto ($)</label>
+        <input id="p-monto" type="number" class="form-control-dark" placeholder="10000">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label-dark">Método</label>
+        <select id="p-metodo" class="form-select-dark">
+          <option>EFECTIVO</option><option>TRANSFERENCIA</option>
+          <option>TARJETA_DEBITO</option><option>TARJETA_CREDITO</option>
+        </select>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label-dark">Tipo</label>
+        <select id="p-tipo" class="form-select-dark">
+          <option>SEÑA</option><option>SALDO</option><option>REEMBOLSO</option>
+        </select>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label-dark">Comprobante</label>
+        <input id="p-comp" class="form-control-dark" placeholder="N° transferencia, etc.">
+      </div>
+    </div>
+  `;
+  openModal('Registrar pago', body, async () => {
+    const payload = {
+      reservaId: +document.getElementById('p-reserva').value,
+      fechaPago: document.getElementById('p-fecha').value,
+      monto: +document.getElementById('p-monto').value,
+      metodo: document.getElementById('p-metodo').value,
+      tipo: document.getElementById('p-tipo').value,
+      comprobante: document.getElementById('p-comp').value,
+    };
+    try {
+      await apiFetch('/pagos', { method: 'POST', body: JSON.stringify(payload) });
+      toast('Pago registrado', 'success');
+      closeModal();
+    } catch(e) { toast(e.message, 'error'); }
+  });
+}
+
+// ── SERVICIOS ────────────────────────────────────────────────
+pages.servicios = async function() {
+  loading();
+  try {
+    const data = await apiFetch('/servicios');
+    setContent(`
+      <div class="section-header">
+        <div><h2>Servicios</h2><div class="sub">${data.length} en catálogo</div></div>
+        <button class="btn-accent" onclick="formServicio()"><i class="bi bi-plus-lg"></i> Nuevo servicio</button>
+      </div>
+      <div class="card-dark">
+        ${data.length === 0 ? `<div class="empty-state"><i class="bi bi-stars"></i><p>No hay servicios en el catálogo.</p></div>` : `
+        <div class="table-responsive">
+          <table class="table-dark-custom">
+            <thead><tr><th>Nombre</th><th>Categoría</th><th>Precio</th><th>Estado</th><th>Acciones</th></tr></thead>
+            <tbody>
+              ${data.map(s => `<tr>
+                <td><strong>${s.nombre}</strong><div style="font-size:11px;color:var(--text-muted)">${s.descripcion||''}</div></td>
+                <td><span class="badge-custom" style="background:var(--accent2-dim);color:var(--accent2)">${s.categoria}</span></td>
+                <td style="font-family:var(--font-mono);color:var(--accent)">${fmtMoney(s.precio)}</td>
+                <td>${estadoBadge(s.activo ? 'ACTIVO' : 'INACTIVO')}</td>
+                <td>
+                  <button class="btn-icon" onclick="formServicio(${JSON.stringify(s).replace(/"/g,'&quot;')})" title="Editar"><i class="bi bi-pencil"></i></button>
+                </td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>`}
+      </div>
+    `);
+  } catch(e) { toast(e.message, 'error'); }
+};
+
+function formServicio(s = null) {
+  const categorias = ['CATERING','DECORACION','MUSICA','FOTOGRAFIA','LIMPIEZA','SEGURIDAD','OTRO'];
+  const body = `
+    <div class="row g-3">
+      <div class="col-12">
+        <label class="form-label-dark">Nombre</label>
+        <input id="sv-nombre" class="form-control-dark" value="${s?.nombre||''}" placeholder="DJ profesional">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label-dark">Categoría</label>
+        <select id="sv-cat" class="form-select-dark">
+          ${categorias.map(c => `<option value="${c}" ${s?.categoria===c?'selected':''}>${c}</option>`).join('')}
+        </select>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label-dark">Precio ($)</label>
+        <input id="sv-precio" type="number" class="form-control-dark" value="${s?.precio||''}" placeholder="8000">
+      </div>
+      <div class="col-12">
+        <label class="form-label-dark">Descripción</label>
+        <textarea id="sv-desc" class="form-control-dark" rows="2">${s?.descripcion||''}</textarea>
+      </div>
+    </div>
+  `;
+  openModal(s ? 'Editar servicio' : 'Nuevo servicio', body, async () => {
+    const payload = {
+      nombre: document.getElementById('sv-nombre').value,
+      categoria: document.getElementById('sv-cat').value,
+      precio: +document.getElementById('sv-precio').value,
+      descripcion: document.getElementById('sv-desc').value,
+    };
+    try {
+      if (s) {
+        await apiFetch(`/servicios/${s.id}`, { method: 'PUT', body: JSON.stringify(payload) });
+        toast('Servicio actualizado', 'success');
+      } else {
+        await apiFetch('/servicios', { method: 'POST', body: JSON.stringify(payload) });
+        toast('Servicio creado', 'success');
+      }
+      closeModal();
+      pages.servicios();
+    } catch(e) { toast(e.message, 'error'); }
+  });
+}
+
+// ── HORARIOS ─────────────────────────────────────────────────
+async function verHorarios(salonId, nombreSalon) {
+  const dias = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+  let horarios = [];
+  try {
+    horarios = await apiFetch(`/salones/${salonId}/horarios`);
+  } catch(e) {}
+
+  const body = `
+    <div class="mb-3 d-flex justify-content-between align-items-center">
+      <span style="font-size:13px;color:var(--text-muted)">Días y horarios operativos</span>
+      <button class="btn-accent" onclick="formHorario(${salonId}, '${nombreSalon}')">
+        <i class="bi bi-plus-lg"></i> Agregar
+      </button>
+    </div>
+    <div id="horarios-list">
+      ${horarios.length === 0
+        ? `<div class="empty-state"><i class="bi bi-clock"></i><p>Sin horarios cargados.</p></div>`
+        : `<table class="table-dark-custom">
+            <thead><tr><th>Día</th><th>Apertura</th><th>Cierre</th><th>Estado</th><th></th></tr></thead>
+            <tbody>
+              ${horarios.map(h => `<tr>
+                <td><strong>${dias[h.diaSemana]}</strong></td>
+                <td style="font-family:var(--font-mono)">${h.apertura}</td>
+                <td style="font-family:var(--font-mono)">${h.cierre}</td>
+                <td>${estadoBadge(h.activo ? 'ACTIVO' : 'INACTIVO')}</td>
+                <td>
+                  <button class="btn-icon danger" onclick="eliminarHorario(${salonId}, ${h.id}, '${nombreSalon}')" title="Eliminar">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </td>
+              </tr>`).join('')}
+            </tbody>
+          </table>`
+      }
+    </div>
+  `;
+
+  openModal(`Horarios — ${nombreSalon}`, body, null);
+  document.getElementById('modalConfirm').style.display = 'none';
+}
+
+function formHorario(salonId, nombreSalon) {
+  const dias = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+  const body = `
+    <div class="row g-3">
+      <div class="col-md-6">
+        <label class="form-label-dark">Día de la semana</label>
+        <select id="h-dia" class="form-select-dark">
+          ${dias.map((d,i) => `<option value="${i}">${d}</option>`).join('')}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label-dark">Apertura</label>
+        <input id="h-apertura" type="time" class="form-control-dark" value="08:00">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label-dark">Cierre</label>
+        <input id="h-cierre" type="time" class="form-control-dark" value="23:00">
+      </div>
+    </div>
+  `;
+
+  openModal('Agregar horario', body, async () => {
+    const payload = {
+      diaSemana: +document.getElementById('h-dia').value,
+      apertura:  document.getElementById('h-apertura').value,
+      cierre:    document.getElementById('h-cierre').value,
+      activo:    true
+    };
+    try {
+      await apiFetch(`/salones/${salonId}/horarios`, {
+        method: 'POST', body: JSON.stringify(payload)
+      });
+      toast('Horario agregado', 'success');
+      closeModal();
+      setTimeout(() => verHorarios(salonId, nombreSalon), 300);
+    } catch(e) { toast(e.message, 'error'); }
+  });
+}
+
+async function eliminarHorario(salonId, horarioId, nombreSalon) {
+  if (!confirm('¿Eliminar este horario?')) return;
+  try {
+    await apiFetch(`/salones/${salonId}/horarios/${horarioId}`, { method: 'DELETE' });
+    toast('Horario eliminado', 'success');
+    closeModal();
+    setTimeout(() => verHorarios(salonId, nombreSalon), 300);
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+// ── MAPA DE SALONES ──────────────────────────────────────────
+let leafletMap = null;
+let leafletMarkers = [];
+
+pages.mapa = async function() {
+  setContent(`
+    <div class="section-header">
+      <div><h2>Mapa de salones</h2><div class="sub">Ubicación y búsqueda por proximidad</div></div>
+    </div>
+    <div class="row g-3 mb-3">
+      <div class="col-md-3">
+        <label class="form-label-dark">Mi latitud</label>
+        <input id="m-lat" type="number" step="any" class="form-control-dark" placeholder="-34.6037">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label-dark">Mi longitud</label>
+        <input id="m-lng" type="number" step="any" class="form-control-dark" placeholder="-58.3816">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label-dark">Radio (km)</label>
+        <input id="m-radio" type="number" class="form-control-dark" value="10" min="1" max="100">
+      </div>
+      <div class="col-md-2" style="display:flex;align-items:flex-end;gap:8px">
+        <button class="btn-accent w-100" onclick="buscarCercanos()">
+          <i class="bi bi-search"></i> Buscar
+        </button>
+      </div>
+      <div class="col-md-2" style="display:flex;align-items:flex-end">
+        <button class="btn-outline-custom w-100" onclick="usarMiUbicacion()">
+          <i class="bi bi-crosshair"></i> Mi ubicación
+        </button>
+      </div>
+    </div>
+    <div class="row g-3">
+      <div class="col-lg-8">
+        <div class="card-dark" style="padding:0;overflow:hidden">
+          <div id="map-container"></div>
+        </div>
+      </div>
+      <div class="col-lg-4">
+        <div class="card-dark h-100">
+          <div class="card-header-custom">
+            <span class="card-title">Salones en el mapa</span>
+            <span id="mapa-count" style="font-size:12px;color:var(--text-muted)">—</span>
+          </div>
+          <div id="mapa-lista" style="overflow-y:auto;max-height:400px"></div>
+        </div>
+      </div>
+    </div>
+  `);
+
+  // Init Leaflet after DOM is ready
+  setTimeout(() => initMapa(), 100);
+};
+
+async function initMapa() {
+  if (leafletMap) { leafletMap.remove(); leafletMap = null; }
+
+  leafletMap = L.map('map-container').setView([-34.6037, -58.3816], 12);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© <a href="https://openstreetmap.org">OpenStreetMap</a>',
+    maxZoom: 19
+  }).addTo(leafletMap);
+
+  // Custom dark tile layer style via CSS filter
+  document.querySelector('#map-container .leaflet-tile-pane').style.filter =
+    'brightness(0.7) invert(1) contrast(1.2) hue-rotate(200deg) saturate(0.5)';
+
+  await cargarTodosLosSalones();
+}
+
+async function cargarTodosLosSalones() {
+  try {
+    const salones = await apiFetch('/salones');
+    const conUbicacion = salones.filter(s => s.latitud && s.longitud);
+
+    // Clear old markers
+    leafletMarkers.forEach(m => m.remove());
+    leafletMarkers = [];
+
+    conUbicacion.forEach(s => agregarMarker(s));
+
+    document.getElementById('mapa-count').textContent = `${conUbicacion.length} con ubicación`;
+    renderListaMapa(conUbicacion);
+
+    if (conUbicacion.length > 0) {
+      const bounds = conUbicacion.map(s => [s.latitud, s.longitud]);
+      leafletMap.fitBounds(bounds, { padding: [40, 40] });
+    }
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+function agregarMarker(salon) {
+  const icon = L.divIcon({
+    className: '',
+    html: `<div style="
+      background:#e8a045;color:#0c0e14;
+      width:32px;height:32px;border-radius:50% 50% 50% 0;
+      transform:rotate(-45deg);display:flex;align-items:center;
+      justify-content:center;font-weight:800;font-size:13px;
+      border:2px solid #0c0e14;box-shadow:0 2px 8px rgba(0,0,0,.5)
+    "><span style="transform:rotate(45deg)"><i class="bi bi-building" style="font-size:14px"></i></span></div>`,
+    iconSize: [32, 32],
+    iconAnchor: [16, 32],
+    popupAnchor: [0, -34]
+  });
+
+  const marker = L.marker([salon.latitud, salon.longitud], { icon })
+    .addTo(leafletMap)
+    .bindPopup(`
+      <div style="min-width:180px">
+        <span class="map-salon-badge">${salon.estado}</span>
+        <div style="font-weight:700;font-size:14px;margin-bottom:4px">${salon.nombre}</div>
+        <div style="font-size:12px;color:#8b8fa8;margin-bottom:6px">${salon.direccion || 'Sin dirección'}</div>
+        <div style="display:flex;gap:12px;font-size:12px">
+          <span><i class="bi bi-people"></i> ${salon.capacidadMax} pax</span>
+          <span style="color:#e8a045;font-weight:700">$${Number(salon.precioHora).toLocaleString('es-AR')}/h</span>
+        </div>
+      </div>
+    `);
+
+  leafletMarkers.push(marker);
+}
+
+function renderListaMapa(salones) {
+  const lista = document.getElementById('mapa-lista');
+  if (!lista) return;
+  if (salones.length === 0) {
+    lista.innerHTML = `<div class="empty-state" style="padding:30px 10px"><i class="bi bi-geo-alt" style="font-size:28px"></i><p>Sin salones con ubicación.</p></div>`;
+    return;
+  }
+  lista.innerHTML = salones.map((s, i) => `
+    <div onclick="flyToSalon(${s.latitud},${s.longitud},${i})"
+      style="padding:12px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .2s"
+      onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background=''">
+      <div style="font-weight:700;font-size:13px;margin-bottom:2px">${s.nombre}</div>
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px"><i class="bi bi-geo-alt"></i> ${s.direccion || 'Sin dirección'}</div>
+      <div style="display:flex;gap:10px;font-size:11px;font-family:var(--font-mono)">
+        <span style="color:var(--text-secondary)">${s.capacidadMax} pax</span>
+        <span style="color:var(--accent)">$${Number(s.precioHora).toLocaleString('es-AR')}/h</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+function flyToSalon(lat, lng, markerIdx) {
+  if (!leafletMap) return;
+  leafletMap.flyTo([lat, lng], 16, { duration: 1 });
+  setTimeout(() => leafletMarkers[markerIdx]?.openPopup(), 1000);
+}
+
+async function buscarCercanos() {
+  const lat = document.getElementById('m-lat').value;
+  const lng = document.getElementById('m-lng').value;
+  const radio = document.getElementById('m-radio').value || 10;
+  if (!lat || !lng) return toast('Ingresá las coordenadas o usá "Mi ubicación"', 'info');
+
+  try {
+    const salones = await apiFetch(`/salones/cercanos?lat=${lat}&lon=${lng}&radioKm=${radio}`);
+
+    leafletMarkers.forEach(m => m.remove());
+    leafletMarkers = [];
+
+    // Marker del usuario
+    const userIcon = L.divIcon({
+      className: '',
+      html: `<div style="width:14px;height:14px;background:#5b7fe8;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 3px rgba(91,127,232,.4)"></div>`,
+      iconSize: [14, 14], iconAnchor: [7, 7]
+    });
+    L.marker([+lat, +lng], { icon: userIcon }).addTo(leafletMap)
+      .bindPopup('<div style="font-weight:700">📍 Tu ubicación</div>');
+
+    // Círculo de radio
+    L.circle([+lat, +lng], {
+      radius: radio * 1000,
+      color: '#5b7fe8', fillColor: '#5b7fe8',
+      fillOpacity: 0.05, weight: 1.5, dashArray: '6 4'
+    }).addTo(leafletMap);
+
+    salones.forEach(s => agregarMarker(s));
+
+    document.getElementById('mapa-count').textContent = `${salones.length} encontrados`;
+    renderListaMapa(salones);
+    toast(`${salones.length} salones en ${radio} km`, 'success');
+
+    if (salones.length > 0) {
+      const bounds = [[+lat, +lng], ...salones.map(s => [s.latitud, s.longitud])];
+      leafletMap.fitBounds(bounds, { padding: [40, 40] });
+    } else {
+      leafletMap.setView([+lat, +lng], 13);
+    }
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+function usarMiUbicacion() {
+  if (!navigator.geolocation) return toast('Tu browser no soporta geolocalización', 'error');
+  navigator.geolocation.getCurrentPosition(pos => {
+    document.getElementById('m-lat').value = pos.coords.latitude.toFixed(6);
+    document.getElementById('m-lng').value = pos.coords.longitude.toFixed(6);
+    toast('Ubicación obtenida', 'success');
+    if (leafletMap) leafletMap.setView([pos.coords.latitude, pos.coords.longitude], 13);
+  }, () => toast('No se pudo obtener la ubicación', 'error'));
+}
+
+// ══════════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════════
+checkApiStatus();
+setInterval(checkApiStatus, 15000);
+navigate('dashboard');
+</script>
+</body>
+</html>
