@@ -5,6 +5,8 @@ import com.salon.fiestas.model.enums.EstadoReserva;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcType;
+import org.hibernate.dialect.PostgreSQLEnumJdbcType;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -41,7 +43,8 @@ public class Reserva {
     private LocalTime horaFin;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @JdbcType(PostgreSQLEnumJdbcType.class)
+    @Column(nullable = false, columnDefinition = "estado_reserva")
     @Builder.Default
     private EstadoReserva estado = EstadoReserva.PENDIENTE;
 

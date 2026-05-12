@@ -3,6 +3,8 @@ package com.salon.fiestas.model.entity;
 import com.salon.fiestas.model.enums.CategoriaServicio;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcType;
+import org.hibernate.dialect.PostgreSQLEnumJdbcType;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
@@ -26,7 +28,8 @@ public class Servicio {
     private BigDecimal precio;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @JdbcType(PostgreSQLEnumJdbcType.class)
+    @Column(nullable = false, columnDefinition = "categoria_servicio")
     private CategoriaServicio categoria;
 
     @Column(nullable = false)

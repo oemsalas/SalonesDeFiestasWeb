@@ -5,6 +5,8 @@ import com.salon.fiestas.model.enums.TipoBloqueo;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcType;
+import org.hibernate.dialect.PostgreSQLEnumJdbcType;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -39,7 +41,8 @@ public class BloqueoSalon {
     private String motivo;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @JdbcType(PostgreSQLEnumJdbcType.class)
+    @Column(nullable = false, columnDefinition = "tipo_bloqueo")
     @Builder.Default
     private TipoBloqueo tipo = TipoBloqueo.OTRO;
 

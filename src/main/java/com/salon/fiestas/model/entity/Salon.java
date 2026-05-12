@@ -4,6 +4,8 @@ import com.salon.fiestas.model.enums.EstadoSalon;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcType;
+import org.hibernate.dialect.PostgreSQLEnumJdbcType;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -31,7 +33,8 @@ public class Salon {
     private BigDecimal precioHora;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @JdbcType(PostgreSQLEnumJdbcType.class)
+    @Column(nullable = false, columnDefinition = "estado_salon")
     @Builder.Default
     private EstadoSalon estado = EstadoSalon.ACTIVO;
 
