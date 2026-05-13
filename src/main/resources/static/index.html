@@ -661,12 +661,26 @@ function estadoBadge(e) {
 function fmtDate(d) { return d ? new Date(d).toLocaleDateString('es-AR') : '—'; }
 function fmtMoney(n) { return n != null ? '$' + Number(n).toLocaleString('es-AR') : '—'; }
 
+// Guardamos el callback pendiente para aplicarlo cuando el modal esté visible
+let _pendingConfirm = null;
+
+const _modalEl = document.getElementById('genericModal');
+_modalEl.addEventListener('show.bs.modal', () => {
+  const btn = document.getElementById('modalConfirm');
+  if (_pendingConfirm) {
+    btn.onclick = _pendingConfirm;
+    btn.style.cssText = 'display:inline-flex !important';
+  } else {
+    btn.onclick = null;
+    btn.style.cssText = 'display:none !important';
+  }
+});
+
 function openModal(title, bodyHtml, onConfirm) {
+  _pendingConfirm = onConfirm || null;
   document.getElementById('modalTitle').textContent = title;
   document.getElementById('modalBody').innerHTML = bodyHtml;
-  const btn = document.getElementById('modalConfirm');
-  btn.onclick = onConfirm;
-  if (!bsModal) bsModal = new bootstrap.Modal(document.getElementById('genericModal'));
+  if (!bsModal) bsModal = new bootstrap.Modal(_modalEl);
   bsModal.show();
 }
 function closeModal() { bsModal?.hide(); }
@@ -1458,7 +1472,7 @@ async function verHorarios(salonId, nombreSalon) {
   const body = `
     <div class="mb-3 d-flex justify-content-between align-items-center">
       <span style="font-size:13px;color:var(--text-muted)">Días y horarios operativos</span>
-      <button class="btn-accent" onclick="formHorario(${salonId}, '${nombreSalon}')">
+      <button class="btn-accent" onclick="mostrarFormHorario(${salonId}, '${nombreSalon}')">
         <i class="bi bi-plus-lg"></i> Agregar
       </button>
     </div>
@@ -1485,12 +1499,31 @@ async function verHorarios(salonId, nombreSalon) {
     </div>
   `;
 
+  // Abre el modal sin botón Guardar (es solo listado)
   openModal(`Horarios — ${nombreSalon}`, body, null);
-  document.getElementById('modalConfirm').style.display = 'none';
 }
 
-function formHorario(salonId, nombreSalon) {
+// Reemplaza el contenido del modal ya abierto para el formulario de agregar horario
+function mostrarFormHorario(salonId, nombreSalon) {
   const dias = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+
+  const onConfirm = async () => {
+    const payload = {
+      diaSemana: +document.getElementById('h-dia').value,
+      apertura:  document.getElementById('h-apertura').value,
+      cierre:    document.getElementById('h-cierre').value,
+      activo:    true
+    };
+    try {
+      await apiFetch(`/salones/${salonId}/horarios`, {
+        method: 'POST', body: JSON.stringify(payload)
+      });
+      toast('Horario agregado', 'success');
+      closeModal();
+      setTimeout(() => verHorarios(salonId, nombreSalon), 300);
+    } catch(e) { toast(e.message, 'error'); }
+  };
+
   const body = `
     <div class="row g-3">
       <div class="col-md-6">
@@ -1510,22 +1543,9 @@ function formHorario(salonId, nombreSalon) {
     </div>
   `;
 
-  openModal('Agregar horario', body, async () => {
-    const payload = {
-      diaSemana: +document.getElementById('h-dia').value,
-      apertura:  document.getElementById('h-apertura').value,
-      cierre:    document.getElementById('h-cierre').value,
-      activo:    true
-    };
-    try {
-      await apiFetch(`/salones/${salonId}/horarios`, {
-        method: 'POST', body: JSON.stringify(payload)
-      });
-      toast('Horario agregado', 'success');
-      closeModal();
-      setTimeout(() => verHorarios(salonId, nombreSalon), 300);
-    } catch(e) { toast(e.message, 'error'); }
-  });
+  // Cerrar el modal actual y reabrir con el formulario
+  closeModal();
+  setTimeout(() => openModal('Agregar horario', body, onConfirm), 350);
 }
 
 async function eliminarHorario(salonId, horarioId, nombreSalon) {

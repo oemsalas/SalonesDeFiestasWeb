@@ -1,0 +1,195 @@
+
+<div id="erd" style="padding: 0.5rem 0"></div>
+<style>
+#erd svg.erDiagram .divider path { stroke-opacity: 0.5; }
+#erd svg.erDiagram .row-rect-odd path,
+#erd svg.erDiagram .row-rect-odd rect,
+#erd svg.erDiagram .row-rect-even path,
+#erd svg.erDiagram .row-rect-even rect { stroke: none !important; }
+</style>
+<script type="module">
+import mermaid from 'https://esm.sh/mermaid@11/dist/mermaid.esm.min.mjs';
+const dark = matchMedia('(prefers-color-scheme: dark)').matches;
+await document.fonts.ready;
+mermaid.initialize({
+  startOnLoad: false,
+  theme: 'base',
+  fontFamily: '"Anthropic Sans", sans-serif',
+  themeVariables: {
+    darkMode: dark,
+    fontSize: '13px',
+    fontFamily: '"Anthropic Sans", sans-serif',
+    lineColor: dark ? '#9c9a92' : '#73726c',
+    textColor: dark ? '#c2c0b6' : '#3d3d3a',
+  },
+});
+
+const diagram = `erDiagram
+  CLIENTE {
+    bigint id PK
+    varchar nombre
+    varchar apellido
+    varchar email
+    varchar telefono
+    varchar dni
+    boolean activo
+    datetime creado_en
+  }
+
+  SALON {
+    bigint id PK
+    varchar nombre
+    int capacidad_max
+    text descripcion
+    decimal precio_hora
+    enum estado
+    datetime creado_en
+  }
+
+  CONFIGURACION_SALON {
+    bigint id PK
+    bigint salon_id FK
+    int min_horas_reserva
+    int max_horas_reserva
+    int anticipacion_min_dias
+    int anticipacion_max_dias
+    boolean permite_solapamiento
+  }
+
+  HORARIO_SALON {
+    bigint id PK
+    bigint salon_id FK
+    int dia_semana
+    time apertura
+    time cierre
+    boolean activo
+  }
+
+  BLOQUEO_SALON {
+    bigint id PK
+    bigint salon_id FK
+    date fecha_desde
+    date fecha_hasta
+    time hora_desde
+    time hora_hasta
+    varchar motivo
+    enum tipo
+    datetime creado_en
+  }
+
+  RESERVA {
+    bigint id PK
+    bigint cliente_id FK
+    bigint salon_id FK
+    date fecha_evento
+    time hora_inicio
+    time hora_fin
+    enum estado
+    decimal seña_pagada
+    decimal precio_total
+    text observaciones
+    datetime creado_en
+  }
+
+  SERVICIO {
+    bigint id PK
+    varchar nombre
+    text descripcion
+    decimal precio
+    enum categoria
+    boolean activo
+  }
+
+  RESERVA_SERVICIO {
+    bigint reserva_id FK
+    bigint servicio_id FK
+    int cantidad
+    decimal precio_unitario
+  }
+
+  PAGO {
+    bigint id PK
+    bigint reserva_id FK
+    date fecha_pago
+    decimal monto
+    enum metodo
+    enum tipo
+    varchar comprobante
+    datetime creado_en
+  }
+
+  PERSONAL {
+    bigint id PK
+    varchar nombre
+    varchar apellido
+    varchar rol
+    varchar telefono
+    boolean activo
+  }
+
+  ASIGNACION {
+    bigint reserva_id FK
+    bigint personal_id FK
+    varchar turno
+  }
+
+  PROVEEDOR {
+    bigint id PK
+    varchar nombre
+    varchar rubro
+    varchar telefono
+    varchar email
+    boolean activo
+  }
+
+  CONTRATO_PROVEEDOR {
+    bigint id PK
+    bigint reserva_id FK
+    bigint proveedor_id FK
+    decimal costo
+    varchar estado
+    text notas
+    datetime creado_en
+  }
+
+  CLIENTE ||--o{ RESERVA : "realiza"
+  SALON ||--o{ RESERVA : "aloja"
+  SALON ||--|| CONFIGURACION_SALON : "tiene"
+  SALON ||--o{ HORARIO_SALON : "opera en"
+  SALON ||--o{ BLOQUEO_SALON : "bloqueado por"
+  RESERVA ||--o{ PAGO : "genera"
+  RESERVA ||--o{ RESERVA_SERVICIO : "incluye"
+  SERVICIO ||--o{ RESERVA_SERVICIO : "ofrecido en"
+  RESERVA ||--o{ ASIGNACION : "asigna"
+  PERSONAL ||--o{ ASIGNACION : "trabaja en"
+  RESERVA ||--o{ CONTRATO_PROVEEDOR : "contrata"
+  PROVEEDOR ||--o{ CONTRATO_PROVEEDOR : "provee"
+`;
+
+const { svg } = await mermaid.render('erd-svg', diagram);
+document.getElementById('erd').innerHTML = svg;
+
+document.querySelectorAll('#erd svg.erDiagram .node').forEach(node => {
+  const firstPath = node.querySelector('path[d]');
+  if (!firstPath) return;
+  const d = firstPath.getAttribute('d');
+  const nums = d.match(/-?[\d.]+/g)?.map(Number);
+  if (!nums || nums.length < 8) return;
+  const xs = [nums[0], nums[2], nums[4], nums[6]];
+  const ys = [nums[1], nums[3], nums[5], nums[7]];
+  const x = Math.min(...xs), y = Math.min(...ys);
+  const w = Math.max(...xs) - x, h = Math.max(...ys) - y;
+  const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  rect.setAttribute('x', x); rect.setAttribute('y', y);
+  rect.setAttribute('width', w); rect.setAttribute('height', h);
+  rect.setAttribute('rx', '8');
+  for (const a of ['fill', 'stroke', 'stroke-width', 'class', 'style']) {
+    if (firstPath.hasAttribute(a)) rect.setAttribute(a, firstPath.getAttribute(a));
+  }
+  firstPath.replaceWith(rect);
+});
+
+document.querySelectorAll('#erd svg.erDiagram .row-rect-odd path, #erd svg.erDiagram .row-rect-even path').forEach(p => {
+  p.setAttribute('stroke', 'none');
+});
+</script>
