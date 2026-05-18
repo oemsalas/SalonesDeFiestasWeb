@@ -12,3 +12,12 @@ spring:
 
   flyway:
     enabled: false
+
+salon:
+  imagenes:
+    max-size-bytes: 5242880
+    allowed-content-types:
+      - image/jpeg
+      - image/png
+      - image/webp
+      - image/gif

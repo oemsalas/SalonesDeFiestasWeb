@@ -57,6 +57,10 @@ public class Salon {
     @Builder.Default
     private List<Reserva> reservas = new ArrayList<>();
 
+    @OneToMany(mappedBy = "salon", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @Builder.Default
+    private List<ImagenSalon> imagenes = new ArrayList<>();
+
     @Column(length = 255)
     private String direccion;
 

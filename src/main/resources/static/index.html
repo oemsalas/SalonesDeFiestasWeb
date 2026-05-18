@@ -420,6 +420,42 @@
     .leaflet-popup-content { font-family: var(--font-display); font-size: 13px; }
     .map-salon-badge { display:inline-block; padding:3px 8px; border-radius:99px; font-size:11px; font-family:var(--font-mono); background:rgba(232,160,69,.15); color:#e8a045; margin-bottom:6px; }
 
+    /* ── Imágenes de salón ───────────────────────────────────── */
+    .salon-thumb {
+      width: 100%; height: 140px; border-radius: var(--radius-sm);
+      background: var(--bg-surface); border: 1px solid var(--border);
+      margin-bottom: 12px; overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--text-muted); font-size: 28px;
+    }
+    .salon-thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .imagenes-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 12px;
+    }
+    .imagen-card {
+      background: var(--bg-surface); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); overflow: hidden;
+    }
+    .imagen-card.principal { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent-dim); }
+    .imagen-card-preview {
+      aspect-ratio: 4/3; background: var(--bg-base);
+      display: flex; align-items: center; justify-content: center;
+      overflow: hidden; cursor: pointer;
+    }
+    .imagen-card-preview img { width: 100%; height: 100%; object-fit: cover; }
+    .imagen-card-body { padding: 8px 10px 10px; }
+    .imagen-card-name {
+      font-size: 11px; color: var(--text-secondary);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      font-family: var(--font-mono); margin-bottom: 6px;
+    }
+    .imagen-card-actions { display: flex; gap: 4px; flex-wrap: wrap; }
+    .imagen-principal-tag {
+      font-size: 9px; letter-spacing: .08em; text-transform: uppercase;
+      color: var(--accent); font-family: var(--font-mono); margin-bottom: 4px;
+    }
+
     @media (max-width: 768px) {
       #sidebar { transform: translateX(-100%); }
       #sidebar.open { transform: translateX(0); }
@@ -566,12 +602,28 @@
 // CONFIG
 // ══════════════════════════════════════════════════════════════
 const API = `${window.location.protocol}//${window.location.host}/api/v1`;
+const API_BASE = `${window.location.protocol}//${window.location.host}/api`;
 let currentPage = 'dashboard';
 let bsModal = null;
 
 // ══════════════════════════════════════════════════════════════
 // API HELPERS
 // ══════════════════════════════════════════════════════════════
+function imagenArchivoUrl(archivoUrl) {
+  if (!archivoUrl) return '';
+  return archivoUrl.startsWith('/') ? API_BASE + archivoUrl : API_BASE + '/' + archivoUrl;
+}
+
+async function apiFetchMultipart(path, formData, method = 'POST') {
+  const res = await fetch(API + path, { method, body: formData });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `Error ${res.status}`);
+  }
+  if (res.status === 204) return null;
+  return res.json();
+}
+
 async function apiFetch(path, opts = {}) {
   try {
     const res = await fetch(API + path, {
@@ -591,7 +643,8 @@ async function apiFetch(path, opts = {}) {
 
 async function checkApiStatus() {
   try {
-    await fetch(API.replace('/v1','') + '/actuator/health', { signal: AbortSignal.timeout(2000) });
+    const res = await fetch(`${API_BASE}/v3/api-docs`, { signal: AbortSignal.timeout(2000) });
+    if (!res.ok) throw new Error('offline');
     document.getElementById('api-dot').classList.remove('offline');
     document.getElementById('api-label').textContent = 'API online';
   } catch {
@@ -922,6 +975,7 @@ pages.salones = async function() {
         data.map(s => `
           <div class="col-md-6 col-xl-4">
             <div class="card-dark h-100" style="border-color:${s.estado==='ACTIVO'?'var(--border)':s.estado==='MANTENIMIENTO'?'rgba(232,196,91,.3)':'rgba(232,91,91,.3)'}">
+              <div class="salon-thumb" id="salon-thumb-${s.id}"><i class="bi bi-image"></i></div>
               <div class="d-flex align-items-start justify-content-between mb-3">
                 <div>
                   <div style="font-size:16px;font-weight:700">${s.nombre}</div>
@@ -945,7 +999,10 @@ pages.salones = async function() {
                   onclick="formSalon(${JSON.stringify(s).replace(/"/g,'&quot;')})">
                   <i class="bi bi-pencil"></i> Editar
                 </button>
-                <button class="btn-icon" onclick="verHorarios(${s.id}, '${s.nombre}')" title="Horarios">
+                <button class="btn-icon" onclick="verImagenes(${s.id}, ${jsInline(s.nombre)})" title="Imágenes">
+                  <i class="bi bi-images"></i>
+                </button>
+                <button class="btn-icon" onclick="verHorarios(${s.id}, ${jsInline(s.nombre)})" title="Horarios">
                   <i class="bi bi-clock"></i>
                 </button>
                 <button class="btn-icon" onclick="cambiarEstadoSalon(${s.id}, '${s.estado}')" title="Cambiar estado">
@@ -957,6 +1014,7 @@ pages.salones = async function() {
         `).join('')}
       </div>
     `);
+    loadSalonThumbnails(data);
   } catch(e) { toast(e.message, 'error'); }
 };
 
@@ -1472,7 +1530,7 @@ async function verHorarios(salonId, nombreSalon) {
   const body = `
     <div class="mb-3 d-flex justify-content-between align-items-center">
       <span style="font-size:13px;color:var(--text-muted)">Días y horarios operativos</span>
-      <button class="btn-accent" onclick="mostrarFormHorario(${salonId}, '${nombreSalon}')">
+      <button class="btn-accent" onclick="mostrarFormHorario(${salonId}, ${jsInline(nombreSalon)})">
         <i class="bi bi-plus-lg"></i> Agregar
       </button>
     </div>
@@ -1488,7 +1546,7 @@ async function verHorarios(salonId, nombreSalon) {
                 <td style="font-family:var(--font-mono)">${h.cierre}</td>
                 <td>${estadoBadge(h.activo ? 'ACTIVO' : 'INACTIVO')}</td>
                 <td>
-                  <button class="btn-icon danger" onclick="eliminarHorario(${salonId}, ${h.id}, '${nombreSalon}')" title="Eliminar">
+                  <button class="btn-icon danger" onclick="eliminarHorario(${salonId}, ${h.id}, ${jsInline(nombreSalon)})" title="Eliminar">
                     <i class="bi bi-trash"></i>
                   </button>
                 </td>
@@ -1556,6 +1614,172 @@ async function eliminarHorario(salonId, horarioId, nombreSalon) {
     closeModal();
     setTimeout(() => verHorarios(salonId, nombreSalon), 300);
   } catch(e) { toast(e.message, 'error'); }
+}
+
+// ── IMÁGENES DE SALÓN ────────────────────────────────────────
+function escapeHtml(str) {
+  if (str == null) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+/** Valor seguro para onclick="fn(...)" dentro de HTML con comillas dobles */
+function jsInline(val) {
+  return JSON.stringify(val).replace(/"/g, '&quot;');
+}
+
+function renderImagenCard(img, salonId, nombreSalon) {
+  const src = imagenArchivoUrl(img.archivoUrl);
+  const principal = img.esPrincipal ? '<div class="imagen-principal-tag">Principal</div>' : '';
+  return `
+    <div class="imagen-card ${img.esPrincipal ? 'principal' : ''}">
+      <div class="imagen-card-preview" onclick="window.open('${src}', '_blank')" title="Ver tamaño completo">
+        <img src="${src}" alt="${escapeHtml(img.nombreArchivo)}" loading="lazy">
+      </div>
+      <div class="imagen-card-body">
+        ${principal}
+        <div class="imagen-card-name" title="${escapeHtml(img.nombreArchivo)}">${escapeHtml(img.nombreArchivo)}</div>
+        <div style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);margin-bottom:6px">
+          ${(img.tamanoBytes / 1024).toFixed(1)} KB
+        </div>
+        <div class="imagen-card-actions">
+          ${!img.esPrincipal ? `<button class="btn-outline-custom" style="font-size:11px;padding:4px 8px" type="button"
+            onclick="marcarImagenPrincipal(${salonId}, ${img.id}, ${jsInline(nombreSalon)})">Principal</button>` : ''}
+          <button class="btn-icon danger" type="button"
+            onclick="eliminarImagenSalon(${salonId}, ${img.id}, ${jsInline(nombreSalon)})" title="Eliminar">
+            <i class="bi bi-trash"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+async function refreshSalonThumbnail(salonId) {
+  const el = document.getElementById(`salon-thumb-${salonId}`);
+  if (!el) return;
+  try {
+    const imgs = await apiFetch(`/salones/${salonId}/imagenes`);
+    const img = imgs.find(i => i.esPrincipal) || imgs[0];
+    if (img) {
+      el.innerHTML = `<img src="${imagenArchivoUrl(img.archivoUrl)}" alt="${escapeHtml(img.nombreArchivo)}">`;
+    } else {
+      el.innerHTML = '<i class="bi bi-image"></i>';
+    }
+  } catch (_) {
+    el.innerHTML = '<i class="bi bi-image"></i>';
+  }
+}
+
+async function loadSalonThumbnails(salones) {
+  for (const s of salones) {
+    await refreshSalonThumbnail(s.id);
+  }
+}
+
+async function verImagenes(salonId, nombreSalon) {
+  let imagenes = [];
+  try {
+    imagenes = await apiFetch(`/salones/${salonId}/imagenes`);
+  } catch (e) {
+    toast(e.message, 'error');
+    return;
+  }
+
+  const body = `
+    <div class="mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <span style="font-size:13px;color:var(--text-muted)">${imagenes.length} imagen(es) — JPEG, PNG, WebP o GIF (máx. 5 MB)</span>
+      <button class="btn-accent" type="button" onclick="mostrarFormImagen(${salonId}, ${jsInline(nombreSalon)})">
+        <i class="bi bi-upload"></i> Subir imagen
+      </button>
+    </div>
+    <div id="imagenes-list">
+      ${imagenes.length === 0
+        ? `<div class="empty-state"><i class="bi bi-images"></i><p>Sin imágenes cargadas.</p></div>`
+        : `<div class="imagenes-grid">${imagenes.map(img => renderImagenCard(img, salonId, nombreSalon)).join('')}</div>`
+      }
+    </div>
+  `;
+
+  openModal(`Imágenes — ${nombreSalon}`, body, null);
+}
+
+function mostrarFormImagen(salonId, nombreSalon) {
+  const onConfirm = async () => {
+    const input = document.getElementById('img-archivo');
+    if (!input.files?.length) {
+      toast('Seleccioná un archivo de imagen', 'error');
+      return;
+    }
+    const fd = new FormData();
+    fd.append('archivo', input.files[0]);
+    const desc = document.getElementById('img-desc').value.trim();
+    if (desc) fd.append('descripcion', desc);
+    const orden = document.getElementById('img-orden').value;
+    if (orden !== '') fd.append('orden', orden);
+    if (document.getElementById('img-principal').checked) {
+      fd.append('esPrincipal', 'true');
+    }
+    try {
+      await apiFetchMultipart(`/salones/${salonId}/imagenes`, fd);
+      toast('Imagen subida', 'success');
+      refreshSalonThumbnail(salonId);
+      closeModal();
+      setTimeout(() => verImagenes(salonId, nombreSalon), 300);
+    } catch (e) { toast(e.message, 'error'); }
+  };
+
+  const body = `
+    <div class="row g-3">
+      <div class="col-12">
+        <label class="form-label-dark">Archivo</label>
+        <input id="img-archivo" type="file" class="form-control-dark" accept="image/jpeg,image/png,image/webp,image/gif">
+      </div>
+      <div class="col-12">
+        <label class="form-label-dark">Descripción (opcional)</label>
+        <input id="img-desc" class="form-control-dark" placeholder="Ej: Salón visto desde la entrada">
+      </div>
+      <div class="col-md-6">
+        <label class="form-label-dark">Orden</label>
+        <input id="img-orden" type="number" min="0" class="form-control-dark" value="0">
+      </div>
+      <div class="col-md-6 d-flex align-items-end">
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;margin-bottom:8px">
+          <input id="img-principal" type="checkbox" style="accent-color:var(--accent)">
+          Imagen principal
+        </label>
+      </div>
+    </div>
+  `;
+
+  closeModal();
+  setTimeout(() => openModal('Subir imagen', body, onConfirm), 350);
+}
+
+async function eliminarImagenSalon(salonId, imagenId, nombreSalon) {
+  if (!confirm('¿Eliminar esta imagen?')) return;
+  try {
+    await apiFetch(`/salones/${salonId}/imagenes/${imagenId}`, { method: 'DELETE' });
+    toast('Imagen eliminada', 'success');
+    refreshSalonThumbnail(salonId);
+    closeModal();
+    setTimeout(() => verImagenes(salonId, nombreSalon), 300);
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+async function marcarImagenPrincipal(salonId, imagenId, nombreSalon) {
+  try {
+    const fd = new FormData();
+    fd.append('esPrincipal', 'true');
+    await apiFetchMultipart(`/salones/${salonId}/imagenes/${imagenId}`, fd, 'PUT');
+    toast('Imagen principal actualizada', 'success');
+    refreshSalonThumbnail(salonId);
+    closeModal();
+    setTimeout(() => verImagenes(salonId, nombreSalon), 300);
+  } catch (e) { toast(e.message, 'error'); }
 }
 
 // ── MAPA DE SALONES ──────────────────────────────────────────

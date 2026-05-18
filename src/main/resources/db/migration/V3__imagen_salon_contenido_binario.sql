@@ -1,0 +1,6 @@
+ALTER TABLE imagen_salon DROP COLUMN IF EXISTS url;
+
+ALTER TABLE imagen_salon ADD COLUMN IF NOT EXISTS nombre_archivo VARCHAR(255);
+ALTER TABLE imagen_salon ADD COLUMN IF NOT EXISTS content_type VARCHAR(100);
+ALTER TABLE imagen_salon ADD COLUMN IF NOT EXISTS tamano_bytes BIGINT;
+ALTER TABLE imagen_salon ADD COLUMN IF NOT EXISTS contenido BYTEA;
